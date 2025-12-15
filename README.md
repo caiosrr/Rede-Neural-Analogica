@@ -4,17 +4,28 @@ Este repositório contém simulações em Python de redes neurais projetadas par
 
 ## Estrutura do Projeto
 
-*   **`Perceptron.py`**: Simulação de um único neurônio (Perceptron). Capaz de resolver problemas linearmente separáveis como AND, OR, NAND, NOR.
-    *   Calcula os pesos (w1, w2) e bias (wb) como tensões de 0V a 9V.
-    *   Usa minimização de Erro Quadrático (MSE) com margem de segurança de 0.3V.
-    *   Considera a saturação real do LM324 (~7.5V).
+O projeto está dividido em duas abordagens matemáticas distintas para o cálculo dos pesos, organizadas em pastas:
 
-*   **`Perceptron3N.py`**: Simulação de uma rede Multi-Layer Perceptron (MLP) com 3 neurônios (2 na camada oculta, 1 na saída).
-    *   Capaz de resolver problemas não-lineares como **XOR** e **XNOR**.
-    *   Implementa topologia mista de tensão (Camada 1 em 9V, Camada 2 em 7.5V) para casar impedâncias e níveis lógicos.
-    *   Usa Momentum (0.9) para estabilidade e convergência.
+### 1. Pasta `MSE/` (Mean Squared Error)
+Utiliza a abordagem clássica de minimização do **Erro Quadrático Médio**.
+*   **Objetivo**: Tenta forçar a tensão de saída a ser exatamente igual ao alvo (ex: 7.5V para '1' e 0V para '0').
+*   **Características**:
+    *   Mais rígido matematicamente.
+    *   Pode ter dificuldade de convergência em portas lógicas com margens estreitas (como AND/NAND) devido à saturação dos OpAmps.
+    *   Arquivos: `Perceptron.py` (1 Neurônio) e `Perceptron3N.py` (3 Neurônios).
 
+### 2. Pasta `Hinge Loss/` (Margem de Segurança)
+Utiliza uma função de perda baseada em **Margem (Hinge Loss)**, similar ao SVM.
+*   **Objetivo**: Penaliza apenas se a saída estiver errada ou dentro de uma "zona de risco" (margem de 0.3V). Se a saída estiver correta e segura, o erro é zero.
+*   **Características**:
+    *   Mais robusto para implementação em hardware.
+    *   Permite que o circuito encontre qualquer solução que funcione ("se funciona, não mexe"), gerando maior diversidade de configurações válidas.
+    *   Converge mais rápido para problemas complexos como XOR.
+    *   Arquivos: `Perceptron_Hinge.py` (1 Neurônio) e `Perceptron3N_Hinge.py` (3 Neurônios).
+
+### Outros
 *   **`ltspice/`**: Arquivos de simulação de circuito (.asc) para validação elétrica no LTSpice.
+*   **`Perceptron_LogLoss.py`**: (Experimental) Implementação usando Cross-Entropy Loss.
 
 ## Como Usar
 
@@ -46,4 +57,4 @@ Este repositório contém simulações em Python de redes neurais projetadas par
 *   **Limitações Físicas**: O código simula explicitamente a saturação dos amplificadores (clipagem em 7.5V) para garantir que os pesos calculados funcionem no mundo real.
 
 ## Autor
-[Caio D.] - Projeto de Graduação (LAB VI)
+[Caio D. S. Ribeiro] - Projeto de Graduação (LAB VI)

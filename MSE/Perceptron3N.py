@@ -157,6 +157,10 @@ def train_network(target_table, epochs=500000, lr=0.02):
             # Fator de correção usa L2_SIGNAL (7.5V)
             factor_n3 = lr * delta_n3 * (1.0/n3.last_n) * GAIN * n3.v_signal
             
+            # Save old weights for backprop
+            old_w1_n3 = n3.w1
+            old_w2_n3 = n3.w2
+
             # Update N3 com Momentum
             step_w1 = factor_n3 if out_n1 else 0
             n3.vel_w1 = momentum * n3.vel_w1 + step_w1
@@ -173,11 +177,11 @@ def train_network(target_table, epochs=500000, lr=0.02):
             
             # 2. Gradiente N1/N2 (Mundo 9V)
             dist_n1 = (n1.last_va - n1.last_bias_v)
-            # Propaga erro ponderado pelo peso do N3
-            delta_n1 = delta_n3 * n3.w1 * sigmoid_derivative(dist_n1)
+            # Propaga erro ponderado pelo peso do N3 (OLD)
+            delta_n1 = delta_n3 * old_w1_n3 * sigmoid_derivative(dist_n1)
             
             dist_n2 = (n2.last_va - n2.last_bias_v)
-            delta_n2 = delta_n3 * n3.w2 * sigmoid_derivative(dist_n2)
+            delta_n2 = delta_n3 * old_w2_n3 * sigmoid_derivative(dist_n2)
 
             # Fator de correção usa L1_SIGNAL (9V)
             factor_n1 = lr * delta_n1 * (1.0/n1.last_n) * GAIN * n1.v_signal

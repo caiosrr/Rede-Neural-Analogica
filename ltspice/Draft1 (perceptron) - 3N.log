@@ -1,6 +1,6 @@
 LTspice 26.0.0 for Windows
 Circuit: C:\Users\caiod\OneDrive\Documentos\Projetos Python\Graduacao\LAB VI\ltspice\Draft1 (perceptron) - 3N.net
-Start Time: Fri Dec 12 14:28:31 2025
+Start Time: Mon Dec 15 15:56:26 2025
 solver = Normal
 Maximum thread count: 8
 tnom = 27
@@ -13,7 +13,7 @@ Gmin stepping failed to find operating point. Use".option gminsteps=0" to skip a
 Starting source stepping with srcstepmethod=0
 Source stepping succeeded in finding the operating point.
 
-Total elapsed time: 1.436 seconds.
+Total elapsed time: 2.891 seconds.
 
 Files loaded:
 C:\Users\caiod\OneDrive\Documentos\Projetos Python\Graduacao\LAB VI\ltspice\Draft1 (perceptron) - 3N.net
