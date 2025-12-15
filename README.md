@@ -14,8 +14,6 @@ Este repositório contém simulações em Python de redes neurais projetadas par
     *   Implementa topologia mista de tensão (Camada 1 em 9V, Camada 2 em 7.5V) para casar impedâncias e níveis lógicos.
     *   Usa Momentum (0.9) para estabilidade e convergência.
 
-*   **`ModeloCircuito.py`**: Versão de referência do neurônio único, usada para validação cruzada.
-
 *   **`ltspice/`**: Arquivos de simulação de circuito (.asc) para validação elétrica no LTSpice.
 
 ## Como Usar
@@ -43,7 +41,7 @@ Este repositório contém simulações em Python de redes neurais projetadas par
 
 *   **Hardware Alvo**: Amplificadores Operacionais LM324.
 *   **Tensão de Alimentação**: 9V (Assimétrica).
-*   **Terra Virtual**: 4.5V (VCC/2).
+*   **Tensão de Referência**: 4.5V (VCC/2).
 *   **Lógica de Treinamento**: Gradient Descent com Hinge Loss adaptada (Margem de 0.3V).
 *   **Limitações Físicas**: O código simula explicitamente a saturação dos amplificadores (clipagem em 7.5V) para garantir que os pesos calculados funcionem no mundo real.
 
