@@ -9,7 +9,7 @@
 \usepackage{amsmath, amssymb}   % Pacotes matemáticos (essencial para o perceptron)
 \usepackage{geometry}           % Configuração de margens
 %\usepackage{setspace}           % Espaçamento entre linhas
-%\usepackage{float}
+\usepackage{float}
 %\usepackage{url}
 %\usepackage{hyperref} % Se estiver usando links
 %\usepackage[capitalise, nameinlink]{cleveref}
@@ -17,7 +17,7 @@
 %\usepackage{tikz}
 %\usetikzlibrary{fit}
 %\usepackage{subcaption}
-%\usepackage{booktabs}
+\usepackage{booktabs}
 %\definecolor{verdeescuro}{rgb}{0.0, 0.5, 0.0}
 
 % --- Configuração das Margens (Padrão ABNT) ---
@@ -87,7 +87,7 @@
 \newpage
 
 % --- Corpo do Texto ---
-\onehalfspacing % Espaçamento 1.5
+% \onehalfspacing % Espaçamento 1.5
 
 \section{Introdução}
 As redes neurais artificiais são modelos computacionais baseados no sistema nervoso de organismos inteligentes, capazes de reconhecer padrões complexos por meio do processamento de dados. Essa estrutura é a base para o chamado aprendizado de máquina, amplamente debatido na atualidade devido à popularização das Inteligências Artificiais (IAs).
@@ -98,7 +98,7 @@ Para um mesmo tipo de neurônio, a estrutura das operações matemáticas perman
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.5\linewidth]{Imagens/Neural_network.jpg}
+    % \includegraphics[width=0.5\linewidth]{Imagens/Neural_network.jpg}
     \caption{Esquema de rede neural em que neurônios interconectados e distribuídos em camadas processam valores e apresentam uma resultado na saída.}
     \label{fig:neural_network}
 \end{figure}
@@ -122,11 +122,11 @@ Sendo $b$ o limiar, é possível definir a resposta do neurônio a partir da fun
     \end{cases}
 \end{equation*}
 
-Portanto, o perceptron deve ser capaz de gerar uma resposta binária a partir das entradas e pesos associados. A \cref{fig:mccul} demonstra visualmente essa interação.
+Portanto, o perceptron deve ser capaz de gerar uma resposta binária a partir das entradas e pesos associados. A Fig. \ref{fig:mccul} demonstra visualmente essa interação.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.7\linewidth]{Imagens/mccul.jpeg}
+    % \includegraphics[width=0.7\linewidth]{Imagens/mccul.jpeg}
     \caption{Operação de soma ponderada das entradas, como proposto por McCulloch e Pitts.}
     \label{fig:mccul}
 \end{figure}
@@ -177,7 +177,7 @@ A escolha adequada de $\eta$ é crucial: valores excessivamente altos podem caus
 \end{table}
 \subsection{Implementação do Neurônio Artificial}
 
-O circuito do neurônio foi baseado no trabalho apresentado em \cite{nutsvolts_perceptron}, com adaptações para atender aos requisitos deste projeto. O esquemático completo é apresentado na \cref{fig:neuronio_unico}, onde as etapas funcionais do processamento estão destacadas.
+O circuito do neurônio foi baseado no trabalho apresentado em \cite{nutsvolts_perceptron}, com adaptações para atender aos requisitos deste projeto. O esquemático completo é apresentado na Fig. \ref{fig:neuronio_unico}, onde as etapas funcionais do processamento estão destacadas.
 
 \hspace*{-3cm}
 \begin{figure}[H] % 1. Começa a figura flutuante
@@ -185,7 +185,7 @@ O circuito do neurônio foi baseado no trabalho apresentado em \cite{nutsvolts_p
     
     % 3. O Resizebox envolve APENAS o desenho (circuitikz)
     \resizebox{1.0\textwidth}{!}{ 
-        \begin{circuitikz}
+        \iffalse \begin{circuitikz}
 
         
 
@@ -320,7 +320,7 @@ O circuito do neurônio foi baseado no trabalho apresentado em \cite{nutsvolts_p
             \draw (B.out) to[R, a=$R_8$, l=$470$] (-12.4,-4) 
                   to[led, l=LED] (-12.4,-6) -- (-18.8,-6);
             
-        \end{circuitikz}
+        \end{circuitikz} \fi
      } % 4. Fecha o resizebox aqui!
 
     % 5. Caption para o texto visível
@@ -335,7 +335,7 @@ O circuito do neurônio foi baseado no trabalho apresentado em \cite{nutsvolts_p
 
 A implementação do circuito baseia-se na operação matemática do Perceptron. A primeira etapa consiste na estabilização da tensão de referência. O \textbf{Bloco 1} apresenta um divisor de tensão acoplado a um Amplificador Operacional \textbf{C} na configuração de Seguidor de Tensão (\textit{Buffer}). Tal configuração é necessária devido à utilização de uma alimentação simples de $9$ V, o que impede a tensão de apresentar valores negativos reais. Para contornar essa limitação, é estabelecido uma tensão de referência em $+4.5$ V. Consequentemente, o potencial de $4.5$ V passa a ser o ponto zero lógico do sistema, permitindo que tensões inferiores a este valor representem as grandezas negativas necessárias para o cálculo dos pesos inibitórios\footnote{Pesos inibitórios são representados matematicamente por valores negativos ($w_i < 0$). Sua função é reduzir o valor da soma ponderada, contrapondo-se aos pesos excitatórios e dificultando a ativação do neurônio.}.
 
-No \textbf{Bloco 2} da \cref{fig:neuronio_unico}, são estabelecidos os sinais de entrada do neurônio. Dois potenciômetros de $10$ k$\Omega$ são alimentados por $9$ V e referenciados ao GND ($0$ V), permitindo que a tensão no cursor varie entre esses dois valores conforme a relação,
+No \textbf{Bloco 2} da Fig. \ref{fig:neuronio_unico}, são estabelecidos os sinais de entrada do neurônio. Dois potenciômetros de $10$ k$\Omega$ são alimentados por $9$ V e referenciados ao GND ($0$ V), permitindo que a tensão no cursor varie entre esses dois valores conforme a relação,
 \begin{equation}
     V_{pot} = 9\,\text{V} \cdot \left(\dfrac{R_{GND}}{10\,\text{k}\Omega}\right) 
 \end{equation}
@@ -350,7 +350,7 @@ V_{\text{in}} = \dfrac{4.5 + S_1 V_1 + S_2 V_2}{1 + S_1 + S_2}\label{eq:soma_pon
 
 onde $V_i$ e $S_i$ representam, respectivamente, a tensão ajustada no potenciômetro e o estado da chave\footnote{Chave $i$ aberta $\rightarrow S_i = 0$; Chave $i$ fechada $\rightarrow S_i = 1$}.
 
-A \cref{eq:soma_ponderada} evidencia que o circuito atua como um calculador de média aritmética ponderada e não como um somador puro. A variável binária $S_i$ atua simultaneamente no numerador (injeção de sinal) e no denominador (normalização).
+A Eq. \ref{eq:soma_ponderada} evidencia que o circuito atua como um calculador de média aritmética ponderada e não como um somador puro. A variável binária $S_i$ atua simultaneamente no numerador (injeção de sinal) e no denominador (normalização).
 
 Isso permite a simulação de sinapses inibitórias através do ajuste de $V_i$. Matematicamente, se inserirmos uma nova entrada $k$ cuja tensão $V_k$ seja menor que a tensão atual do nó ($V_{\text{in}}$), o novo valor de equilíbrio será reduzido. 
 
@@ -377,14 +377,14 @@ A partir das equações descritas é possível compreender como que os pesos inf
 1 & 0 & 1 \\ 
 1 & 1 & 0 \\ 
 \hline 
-\end{tabular} } e verifiquemos cada etapa do circuito. O procedimento pode ser analisado na \cref{tab:resultados_nand}
+\end{tabular} } e verifiquemos cada etapa do circuito. O procedimento pode ser analisado na Tab. \ref{tab:resultados_nand}
 
 \begin{table}[h!] 
 \centering 
 \caption{Resultados experimentais e calculados para a porta lógica NAND. Os pesos foram ajustados para $V_1 = 3.19$ V ($3.54$ k$\Omega$), $V_2 = 3.24$ V ($3.60$ k$\Omega$). e $V_3 = 2.06$ V ($2.29$ k$\Omega$).} \label{tab:resultados_nand} 
 \begin{tabular}{cc|ccc|cc} 
 \toprule 
-\multicolumn{2}{c|}{\textbf{Entradas}} & \multicolumn{3}{c|}{\textbf{Tensões do Circuito}} & \multicolumn{2}{c}{\textbf{Resultado}} \\ $S_1$ & $S_2$ & $V_{\text{in}}$ (V) & $V_{\text{a}}$ (V) & $V_{\text{bias}}$ (V) & Saída ($y$) & Estado do LED \\ \midrule 0 & 0 & 4.50 & 4.50 & 2.06 & \textbf{1} & \textcolor{verdeescuro}{\textbf{LIGADO}} \\ 0 & 1 & 3.87 & 2.48 & 2.06 & \textbf{1} & \textcolor{verdeescuro}{\textbf{LIGADO}} \\ 1 & 0 & 3.85 & 2.40 & 2.06 & \textbf{1} & \textcolor{verdeescuro}{\textbf{LIGADO}} \\ 1 & 1 & 3.64 & 1.76 & 2.06 & \textbf{0} & \textcolor{red}{\textbf{DESLIGADO}} \\ \bottomrule 
+\multicolumn{2}{c|}{\textbf{Entradas}} & \multicolumn{3}{c|}{\textbf{Tensões do Circuito}} & \multicolumn{2}{c}{\textbf{Resultado}} \\ $S_1$ & $S_2$ & $V_{\text{in}}$ (V) & $V_{\text{a}}$ (V) & $V_{\text{bias}}$ (V) & Saída ($y$) & Estado do LED \\ \midrule 0 & 0 & 4.50 & 4.50 & 2.06 & \textbf{1} & \textbf{LIGADO} \\ 0 & 1 & 3.87 & 2.48 & 2.06 & \textbf{1} & \textbf{LIGADO} \\ 1 & 0 & 3.85 & 2.40 & 2.06 & \textbf{1} & \textbf{LIGADO} \\ 1 & 1 & 3.64 & 1.76 & 2.06 & \textbf{0} & \textbf{DESLIGADO} \\ \bottomrule 
 \end{tabular} 
 \end{table} 
 
@@ -394,7 +394,7 @@ A partir das equações descritas é possível compreender como que os pesos inf
     \centering
     \hspace*{-3cm}
     \resizebox{1.3\textwidth}{!}{
-        \begin{circuitikz}
+        \iffalse \begin{circuitikz}
 
             % ==================================================================
             % NEURÔNIO 1 (TOPO ESQUERDA)
@@ -664,7 +664,7 @@ A partir das equações descritas é possível compreender como que os pesos inf
             \draw (B3.out) to[R, a=$R_8$, l=$100$] (1.5,-7.5) 
             to[led, l=LED] (1.5,-9.5) -- (-4,-9.5);
 
-        \end{circuitikz}
+        \end{circuitikz} \fi
     }
     \caption{Circuito completo da rede neural artificial composto por três neurônios.}
     \label{fig:rede_xor}
@@ -690,7 +690,7 @@ Foram construídos scripts em Python que fazem o treinamento por backpropagation
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.5\linewidth]{Imagens/PesosScriptXOR3N.png}
+    % \includegraphics[width=0.5\linewidth]{Imagens/PesosScriptXOR3N.png}
     \caption{Exemplo de resposta do script para circuito de três neurônios e a chave XOR}
     \label{fig:scriptXOR}
 \end{figure}
@@ -705,7 +705,7 @@ Em relação a montagem dos circuitos analógicos, o projeto teve como resultado
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.5\linewidth]{Imagens/1neuronio.png}
+    % \includegraphics[width=0.5\linewidth]{Imagens/1neuronio.png}
     \caption{Imagem de um dos neurônios analógicos construídos. Em azul, a chave do input A; em vermelho, a chave do input B; em verde, o output do sistema (LED); e em roxo, os potenciômetros de cada peso.}
     \label{fig:1neuronio}
 \end{figure}
@@ -719,33 +719,33 @@ Com esse neurônio, é possível gerar quaisquer portas lógicas, com exceção 
 \begin{figure}[H]
     \centering
     % --- Primeira Imagem (a) ---
-    \begin{subfigure}[b]{0.45\textwidth}
+    \begin{minipage}[b]{0.45\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{Imagens/neuronio nand 00.jpeg}
-        \caption{Input 00}
-    \end{subfigure}
+        % \includegraphics[width=\textwidth]{Imagens/neuronio nand 00.jpeg}
+        \centerline{Input 00}
+    \end{minipage}
     \hfill 
-    \begin{subfigure}[b]{0.45\textwidth}
+    \begin{minipage}[b]{0.45\textwidth}
         \centering
-        \includegraphics[ width=\textwidth]{Imagens/neuronio nand 01.jpeg}
-        \caption{Input 01}
-    \end{subfigure}
+        % \includegraphics[ width=\textwidth]{Imagens/neuronio nand 01.jpeg}
+        \centerline{Input 01}
+    \end{minipage}
     
     \vspace{0.5cm} 
     
     % --- Terceira Imagem (c) ---
-    \begin{subfigure}[b]{0.45\textwidth}
+    \begin{minipage}[b]{0.45\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{Imagens/neuronio nand 10.jpeg}
-        \caption{Input 10}
-    \end{subfigure}
+        % \includegraphics[width=\textwidth]{Imagens/neuronio nand 10.jpeg}
+        \centerline{Input 10}
+    \end{minipage}
     \hfill
     % --- Quarta Imagem (d) ---
-    \begin{subfigure}[b]{0.45\textwidth}
+    \begin{minipage}[b]{0.45\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{Imagens/neuronio nand 11.jpeg}
-        \caption{Input 11}
-    \end{subfigure}
+        % \includegraphics[width=\textwidth]{Imagens/neuronio nand 11.jpeg}
+        \centerline{Input 11}
+    \end{minipage}
     
     \caption{Neurônio com pesos ajustados para reproduzir porta NAND.}
     \label{fig:portaNAND}
@@ -758,7 +758,7 @@ Além disso, foi realizada com sucesso a integração desses três neurônios de
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width = 1\linewidth]{Imagens/circuito3neuronios.png}
+    % \includegraphics[width = 1\linewidth]{Imagens/circuito3neuronios.png}
     \caption{Imagem de circuito de rede neural construído. Indicado em azul, a chave do input A; em vermelho, a chave do input B; em amarelo, o output do sistema (LED); e em laranja, o output dos neurônios de entrada.}
     \label{fig:circuito3neuronios}
 \end{figure}
@@ -772,33 +772,33 @@ Como dito anteriormente, as portas XOR (ou exclusivo) e XNOR não são linearmen
 \begin{figure}[H]
     \centering
     % --- Primeira Imagem (a) ---
-    \begin{subfigure}[b]{0.45\textwidth}
+    \begin{minipage}[b]{0.45\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{Imagens/neuronios XOR 00.jpeg}
-        \caption{Input 00}
-    \end{subfigure}
+        % \includegraphics[width=\textwidth]{Imagens/neuronios XOR 00.jpeg}
+        \centerline{Input 00}
+    \end{minipage}
     \hfill 
-    \begin{subfigure}[b]{0.45\textwidth}
+    \begin{minipage}[b]{0.45\textwidth}
         \centering
-        \includegraphics[ width=\textwidth]{Imagens/neuronios XOR 01.jpeg}
-        \caption{Input 01}
-    \end{subfigure}
+        % \includegraphics[ width=\textwidth]{Imagens/neuronios XOR 01.jpeg}
+        \centerline{Input 01}
+    \end{minipage}
     
     \vspace{0.5cm} 
     
     % --- Terceira Imagem (c) ---
-    \begin{subfigure}[b]{0.45\textwidth}
+    \begin{minipage}[b]{0.45\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{Imagens/neuronios XOR 10.jpeg}
-        \caption{Input 10}
-    \end{subfigure}
+        % \includegraphics[width=\textwidth]{Imagens/neuronios XOR 10.jpeg}
+        \centerline{Input 10}
+    \end{minipage}
     \hfill
     % --- Quarta Imagem (d) ---
-    \begin{subfigure}[b]{0.45\textwidth}
+    \begin{minipage}[b]{0.45\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{Imagens/neuronios XOR 11.jpeg}
-        \caption{Input 11}
-    \end{subfigure}
+        % \includegraphics[width=\textwidth]{Imagens/neuronios XOR 11.jpeg}
+        \centerline{Input 11}
+    \end{minipage}
     
     \caption{Rede neural com pesos ajustados para reproduzir porta XOR.}
     \label{fig:portaXOR}
@@ -823,6 +823,6 @@ Além disso, os testes realizados confirmaram a robustez do sistema. Foi possív
 Por fim, o experimento evidenciou as limitações da computação analógica. Notou-se que lidar com componentes analógicos demanda um trabalho muito maior a suas contrapartes digitais. Além disso, a escalabilidade para redes neurais maiores enfrentaria desafios significativos, de forma a ser inviável, mas esse projeto verificou-se que seria possível faze-lá.
 
 % --- Referências ---
-\bibliographystyle{abntex2-alf}
-\bibliography{bibliografia}      
+% \bibliographystyle{abntex2-alf}
+% \bibliography{bibliografia}      
 \end{document}
