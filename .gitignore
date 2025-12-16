@@ -2,3 +2,14 @@ __pycache__/
 *.pyc
 .vscode/
 *.asc
+
+# LaTeX build files
+*.aux
+*.log
+*.out
+*.pdf
+*.synctex.gz
+*.toc
+*.fls
+*.fdb_latexmk
+
