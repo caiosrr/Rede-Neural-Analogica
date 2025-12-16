@@ -45,9 +45,9 @@ class HardwareNeuron:
         self.v_sat    = v_sat    # Tensão máxima de saída do OpAmp
         
         # Pesos (0.0 a 1.0 - Posição do Potenciômetro)
-        self.w1 = random.uniform(0.1, 0.9)
-        self.w2 = random.uniform(0.1, 0.9)
-        self.w_bias = random.uniform(0.1, 0.9)
+        self.w1 = random.uniform(0, 1)
+        self.w2 = random.uniform(0, 1)
+        self.w_bias = random.uniform(0, 1)
         
         # Memória
         self.last_va = 0.0
@@ -217,10 +217,10 @@ def train_network(target_table, epochs=500000, lr=0.005):
 
                 # Manter físico (0-100%)
                 for n in [n1, n2, n3]:
-                    n.w1 = clip(n.w1, 0.1, 0.9)
-                    n.w2 = clip(n.w2, 0.1, 0.9)
+                    n.w1 = clip(n.w1, 0, 1)
+                    n.w2 = clip(n.w2, 0, 1)
                     max_bias_w = n.v_sat / n.v_supply
-                    n.w_bias = clip(n.w_bias, 0.1, max_bias_w)
+                    n.w_bias = clip(n.w_bias, 0, max_bias_w)
         
         if errors_count == 0:
             break

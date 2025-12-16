@@ -48,9 +48,9 @@ class HardwareNeuron:
         self.v_sat    = v_sat    # Tensão máxima de saída do OpAmp
         
         # Pesos (0.0 a 1.0 - Posição do Potenciômetro)
-        self.w1 = random.uniform(0.1, 0.9)
-        self.w2 = random.uniform(0.1, 0.9)
-        self.w_bias = random.uniform(0.1, 0.9)
+        self.w1 = random.uniform(0, 1)
+        self.w2 = random.uniform(0, 1)
+        self.w_bias = random.uniform(0, 1)
         
         # Memória
         self.last_va = 0.0
@@ -104,11 +104,6 @@ def print_res(neuron, layer_name):
     v1 = neuron.get_weight_voltage(neuron.w1)
     v2 = neuron.get_weight_voltage(neuron.w2)
     vb = neuron.get_bias_voltage(neuron.w_bias)
-    
-    # R = V * 10k / V_supply_of_pot
-    r1 = (v1 / neuron.v_signal) * 10.0 if neuron.v_signal > 0 else 0
-    r2 = (v2 / neuron.v_signal) * 10.0 if neuron.v_signal > 0 else 0
-    rb = (vb / neuron.v_supply) * 10.0 if neuron.v_supply > 0 else 0
     
     print(f"\n[{layer_name}] {neuron.name}:")
     print(f"  P1 (w1): {neuron.w1*100:5.1f}% -> {v1:.2f}V")
