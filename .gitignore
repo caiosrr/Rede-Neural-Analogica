@@ -1,7 +1,6 @@
 __pycache__/
 *.pyc
 .vscode/
-*.asc
 
 # LaTeX build files
 *.aux

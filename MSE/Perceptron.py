@@ -20,12 +20,15 @@ porta_table = {(0, 0): 1, (0, 1): 0, (1, 0): 0, (1, 1): 1} # A OR B
 def clip(v: float, vmin: float = 0.0, vmax: float = 1.0) -> float:
     return max(vmin, min(vmax, v))
 
-def sigmoid_derivative(x):
-    # Derivada suave para passar pelo degrau do comparador
+def sigmoid(x):
     try:
-        s = 1 / (1 + math.exp(-x))
+        return 1 / (1 + math.exp(-x))
     except OverflowError:
-        s = 0 if x < 0 else 1
+        return 0 if x < 0 else 1
+
+def sigmoid_derivative(x):
+    # Derivada da sigmoide: f'(x) = f(x) * (1 - f(x))
+    s = sigmoid(x)
     return s * (1 - s)
 
 def frac_to_voltage(frac: float) -> float:
@@ -67,84 +70,40 @@ def forward_pass(w1: float, w2: float, w_bias: float, x1: int, x2: int):
     
     return v_a, v_bias, n, pred_binaria
 
-def train_neuron(target_table: dict, gate_name: str = "Custom", lr: float = 0.015, epochs: int = 500000):
-    """
-    Treina 1 neurônio usando Backpropagation Analítico (Gradient Descent).
-    w1 e w2 são independentes (sem simetria).
-    """
-    
-    # Inicialização Aleatória dos Pesos (0.0 a 1.0)
+def train_neuron(target_table: dict, gate_name: str = "Custom", lr: float = 0.001, epochs: int = 500000):
     w1 = random.uniform(0.0, 1.0)
     w2 = random.uniform(0.0, 1.0)
     w_bias = random.uniform(0.0, 1.0)
     
-    margem = 0.3 # Margem de segurança (0.3V para robustez)
-    
-    print(f"--- Treinando {gate_name} (Minimização de Erro Quadrático) ---")
+    print(f"--- Treinando {gate_name} (MSE Sigmoide) ---")
     
     for epoch in range(epochs):
         total_error = 0.0
-        
-        # Embaralha os dados para o gradiente descendente estocástico (SGD)
         exemplos = list(target_table.items())
         random.shuffle(exemplos)
         
         for (x1, x2), y_target in exemplos:
-            # 1. Forward Pass
             v_a, v_bias, n, _ = forward_pass(w1, w2, w_bias, x1, x2)
-            
-            # O forward_pass já retorna os valores clipados em 7.5V (limite do LM324)
-
-            # Converter alvo 0/1 para -1/+1
-            y_sign = 1.0 if y_target == 1 else -1.0
-            
-            # Cálculo do 'z' (distância) usando os valores reais (clipados)
             z = v_a - v_bias
             
-            # --- Lógica de Erro Quadrático com Margem ---
-            # Queremos que (y_sign * z) seja pelo menos igual à margem.
-            # A "violação" é o quanto falta para chegar na margem segura.
-            violation = margem - (y_sign * z)
+            # MSE com Sigmoide
+            y_pred = sigmoid(z)
+            error = y_target - y_pred
+            total_error += error ** 2
             
-            # Se violation > 0, significa que não atingimos a margem segura
-            if violation > 0:
-                # Erro Quadrático: Loss = violation^2
-                # Somamos ao total para monitorar a convergência
-                total_error += violation ** 2
-                
-                # Gradiente do Erro Quadrático:
-                # Derivada de (margem - y*z)^2 em relação a z é: 2 * (margem - y*z) * (-y)
-                # Ou seja: -y_sign * 2 * violation
-                # Multiplicamos pela derivada da sigmoide (solicitado pelo usuário/teoria clássica)
-                # Isso suaviza o gradiente, mas exige mais épocas ou LR maior para fechar a margem exata.
-                delta = (-y_sign * 2 * violation) * sigmoid_derivative(z)
-                
-                # --- GRADIENTE PARA w1 ---
-                if x1:
-                    grad_w1 = delta * (GAIN) * (1.0 / n) * (DELTA_V)
-                    w1 = w1 - lr * grad_w1 # Update
-                
-                # --- GRADIENTE PARA w2 ---
-                if x2:
-                    grad_w2 = delta * (GAIN) * (1.0 / n) * (DELTA_V)
-                    w2 = w2 - lr * grad_w2 # Update
-                
-                # --- GRADIENTE PARA w_bias ---
-                # dL/dw_bias = delta * (dz/dVbias) * (dVbias/dw_bias)
-                # dz/dVbias = -1
-                grad_bias = delta * (-1.0) * (DELTA_V)
-                w_bias = w_bias - lr * grad_bias # Update
-                
-                # Clipar para manter valores físicos (0 a 100% do potenciômetro)
-                w1 = clip(w1)
-                w2 = clip(w2)
-                # O Bias não pode passar de 7.5V (limite do LM324), então limitamos o peso
-                w_bias = clip(w_bias, 0.0, 7.5 / DELTA_V)
-        
-        # Early stopping: Só para se o erro for EXTREMAMENTE baixo
-        # Isso garante que violações pequenas (ex: 0.02V) ainda sejam corrigidas
-        if total_error < 1e-16:
-            break
+            # Gradiente: dL/dz = -2 * error * sigmoid_derivative(z)
+            delta = -2 * error * sigmoid_derivative(z)
+            
+            if x1: w1 -= lr * delta * GAIN * (1.0/n) * DELTA_V
+            if x2: w2 -= lr * delta * GAIN * (1.0/n) * DELTA_V
+            
+            w_bias -= lr * delta * (-1.0) * DELTA_V
+            
+            w1 = clip(w1)
+            w2 = clip(w2)
+            w_bias = clip(w_bias, 0.0, 7.5 / DELTA_V)
+    
+        if total_error < 1e-5: break
             
     return w1, w2, w_bias
 

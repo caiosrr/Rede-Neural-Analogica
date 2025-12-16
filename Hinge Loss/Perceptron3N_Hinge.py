@@ -136,16 +136,16 @@ def train_network(target_table, epochs=500000, lr=0.005):
             z_n3 = n3.last_va - n3.last_bias_v
             y_sign = 1.0 if y_target == 1 else -1.0
             
-            # Score: quão "certo" e "forte" está o sinal
-            score = y_sign * z_n3
             
-            if score < margem:
+            L = max(0, margem - y_sign * z_n3)
+            
+            if L > 0:
                 errors_count += 1
                 
-                # Gradiente Linear do Hinge Loss
-                # Queremos aumentar o score.
-                # Direção de ajuste para z_n3: +y_sign
-                delta_n3 = y_sign
+                # Gradiente do Hinge Loss
+                # L = margem - y_sign * z
+                # dL/dz = -y_sign
+                delta_n3 = -y_sign
                 
                 # IMPORTANTE: Guardar os pesos ANTIGOS de N3 para o Backpropagation.
                 # O erro de N1/N2 deve ser calculado com base na rede que gerou a saída atual,
@@ -158,21 +158,23 @@ def train_network(target_table, epochs=500000, lr=0.005):
                 # d(Vbias)/dw = V_supply
                 
                 # Fator de correção usa L2_SIGNAL (7.5V)
+                # grad_w = delta * (GAIN/n) * V_signal
                 factor_n3 = lr * delta_n3 * (1.0/n3.last_n) * GAIN * n3.v_signal
                 
                 # Update N3 com Momentum
                 step_w1 = factor_n3 if out_n1 else 0
                 n3.vel_w1 = momentum * n3.vel_w1 + step_w1
-                n3.w1 += n3.vel_w1 
+                n3.w1 -= n3.vel_w1 
                 
                 step_w2 = factor_n3 if out_n2 else 0
                 n3.vel_w2 = momentum * n3.vel_w2 + step_w2
-                n3.w2 += n3.vel_w2
+                n3.w2 -= n3.vel_w2
                 
                 # Bias: z = Va - Vbias. d(z)/d(bias) = -1.
-                step_bias = lr * (-delta_n3) * n3.v_supply
+                # grad_bias = delta * (-1) * V_supply
+                step_bias = lr * delta_n3 * (-1.0) * n3.v_supply
                 n3.vel_bias = momentum * n3.vel_bias + step_bias
-                n3.w_bias += n3.vel_bias
+                n3.w_bias -= n3.vel_bias
                 
                 # --- Backpropagation para N1/N2 ---
                 # Usamos old_w1_n3 e old_w2_n3 aqui!
@@ -188,30 +190,30 @@ def train_network(target_table, epochs=500000, lr=0.005):
                 
                 step_w1_n1 = factor_n1 if x1 else 0
                 n1.vel_w1 = momentum * n1.vel_w1 + step_w1_n1
-                n1.w1 += n1.vel_w1
+                n1.w1 -= n1.vel_w1
                 
                 step_w2_n1 = factor_n1 if x2 else 0
                 n1.vel_w2 = momentum * n1.vel_w2 + step_w2_n1
-                n1.w2 += n1.vel_w2
+                n1.w2 -= n1.vel_w2
                 
-                step_bias_n1 = lr * (-delta_n1) * n1.v_supply
+                step_bias_n1 = lr * delta_n1 * (-1.0) * n1.v_supply
                 n1.vel_bias = momentum * n1.vel_bias + step_bias_n1
-                n1.w_bias += n1.vel_bias
+                n1.w_bias -= n1.vel_bias
                 
                 # --- Atualização N2 ---
                 factor_n2 = lr * delta_n2 * (1.0/n2.last_n) * GAIN * n2.v_signal
                 
                 step_w1_n2 = factor_n2 if x1 else 0
                 n2.vel_w1 = momentum * n2.vel_w1 + step_w1_n2
-                n2.w1 += n2.vel_w1
+                n2.w1 -= n2.vel_w1
                 
                 step_w2_n2 = factor_n2 if x2 else 0
                 n2.vel_w2 = momentum * n2.vel_w2 + step_w2_n2
-                n2.w2 += n2.vel_w2
+                n2.w2 -= n2.vel_w2
                 
-                step_bias_n2 = lr * (-delta_n2) * n2.v_supply
+                step_bias_n2 = lr * delta_n2 * (-1.0) * n2.v_supply
                 n2.vel_bias = momentum * n2.vel_bias + step_bias_n2
-                n2.w_bias += n2.vel_bias
+                n2.w_bias -= n2.vel_bias
 
                 # Manter físico (0-100%)
                 for n in [n1, n2, n3]:

@@ -26,12 +26,15 @@ XOR_TABLE = {(0, 0): 0, (0, 1): 1, (1, 0): 1, (1, 1): 0}
 def clip(v: float, vmin: float, vmax: float) -> float:
     return max(vmin, min(vmax, v))
 
-def sigmoid_derivative(x):
-    # Derivada suave para passar pelo degrau do comparador
+def sigmoid(x):
     try:
-        s = 1 / (1 + math.exp(-x))
+        return 1 / (1 + math.exp(-x))
     except OverflowError:
-        s = 0 if x < 0 else 1
+        return 0 if x < 0 else 1
+
+def sigmoid_derivative(x):
+    # Derivada da sigmoide: f'(x) = f(x) * (1 - f(x))
+    s = sigmoid(x)
     return s * (1 - s)
 
 class HardwareNeuron:
@@ -112,21 +115,12 @@ def print_res(neuron, layer_name):
     print(f"  P2 (w2): {neuron.w2*100:5.1f}% -> {v2:.2f}V ")
     print(f"  PB (wb): {neuron.w_bias*100:5.1f}% -> {vb:.2f}V")
 
-def train_network(target_table, epochs=500000, lr=0.02):
-    
-    # --- CONFIGURAÇÃO DA TOPOLOGIA MISTA ---
-    
-    # Camada 1 (N1, N2): Mundo 9V
-    # Entrada=9V, Vcc=9V, Ref=4.5V, Saída=7.5V
+def train_network(target_table, epochs=500000, lr=0.001):
     n1 = HardwareNeuron("Oculto 1", v_signal=L1_SIGNAL, v_supply=L1_VCC, v_ref=L1_REF, v_sat=L1_SAT)
     n2 = HardwareNeuron("Oculto 2", v_signal=L1_SIGNAL, v_supply=L1_VCC, v_ref=L1_REF, v_sat=L1_SAT)
-    
-    # Camada 2 (N3): Mundo 7.5V
-    # Entrada=7.5V (vem de N1/N2), Vcc=7.5V, Ref=3.75V, Saída=5.0V
     n3 = HardwareNeuron("Saída",    v_signal=L2_SIGNAL, v_supply=L2_VCC, v_ref=L2_REF, v_sat=L2_SAT)
     
     momentum = 0.9
-    margem = 0.3
     
     for i in range(epochs):
         total_error = 0.0
@@ -134,97 +128,68 @@ def train_network(target_table, epochs=500000, lr=0.02):
         random.shuffle(exemplos)
         
         for (x1, x2), y_target in exemplos:
-            # Forward
             out_n1 = n1.forward(x1, x2)
             out_n2 = n2.forward(x1, x2)
-            n3.forward(out_n1, out_n2) # O retorno binário não é usado no MSE
-            # --- Lógica MSE com Margem (N3) ---
+            n3.forward(out_n1, out_n2)
+            
             z_n3 = n3.last_va - n3.last_bias_v
-            y_sign = 1.0 if y_target == 1 else -1.0
             
-            violation = margem - (y_sign * z_n3)
+            # MSE com Sigmoide
+            y_pred = sigmoid(z_n3)
+            error = y_target - y_pred
+            total_error += error ** 2
             
-            delta_n3 = 0.0
+            # Gradiente: dL/dz = -2 * error * sigmoid_derivative(z)
+            delta_n3 = -2 * error * sigmoid_derivative(z_n3)
             
-            if violation > 0:
-                total_error += violation ** 2
-                # Gradiente MSE: -y_sign * 2 * violation * sigmoid_derivative(z)
-                delta_n3 = (-y_sign * 2 * violation) * sigmoid_derivative(z_n3)
-            
-            if delta_n3 == 0: continue
-            
-            # 1. Gradiente N3 (Mundo 7.5V)
-            # Fator de correção usa L2_SIGNAL (7.5V)
+            # Update N3
             factor_n3 = lr * delta_n3 * (1.0/n3.last_n) * GAIN * n3.v_signal
+            old_w1_n3, old_w2_n3 = n3.w1, n3.w2
             
-            # Save old weights for backprop
-            old_w1_n3 = n3.w1
-            old_w2_n3 = n3.w2
-
-            # Update N3 com Momentum
-            step_w1 = factor_n3 if out_n1 else 0
-            n3.vel_w1 = momentum * n3.vel_w1 + step_w1
+            n3.vel_w1 = momentum * n3.vel_w1 + (factor_n3 if out_n1 else 0)
             n3.w1 -= n3.vel_w1
             
-            step_w2 = factor_n3 if out_n2 else 0
-            n3.vel_w2 = momentum * n3.vel_w2 + step_w2
+            n3.vel_w2 = momentum * n3.vel_w2 + (factor_n3 if out_n2 else 0)
             n3.w2 -= n3.vel_w2
             
-            # Bias usa L2_VCC (7.5V)
-            step_bias = lr * delta_n3 * n3.v_supply * 0.5
-            n3.vel_bias = momentum * n3.vel_bias + step_bias
+            n3.vel_bias = momentum * n3.vel_bias + (lr * delta_n3 * n3.v_supply * 0.5)
             n3.w_bias += n3.vel_bias
             
-            # 2. Gradiente N1/N2 (Mundo 9V)
+            # Backprop N1/N2
             dist_n1 = (n1.last_va - n1.last_bias_v)
-            # Propaga erro ponderado pelo peso do N3 (OLD)
             delta_n1 = delta_n3 * old_w1_n3 * sigmoid_derivative(dist_n1)
             
             dist_n2 = (n2.last_va - n2.last_bias_v)
             delta_n2 = delta_n3 * old_w2_n3 * sigmoid_derivative(dist_n2)
 
-            # Fator de correção usa L1_SIGNAL (9V)
+            # Update N1
             factor_n1 = lr * delta_n1 * (1.0/n1.last_n) * GAIN * n1.v_signal
-            
-            # Update N1 com Momentum
-            step_w1_n1 = factor_n1 if x1 else 0
-            n1.vel_w1 = momentum * n1.vel_w1 + step_w1_n1
+            n1.vel_w1 = momentum * n1.vel_w1 + (factor_n1 if x1 else 0)
             n1.w1 -= n1.vel_w1
             
-            step_w2_n1 = factor_n1 if x2 else 0
-            n1.vel_w2 = momentum * n1.vel_w2 + step_w2_n1
+            n1.vel_w2 = momentum * n1.vel_w2 + (factor_n1 if x2 else 0)
             n1.w2 -= n1.vel_w2
             
-            step_bias_n1 = lr * delta_n1 * n1.v_supply * 0.5
-            n1.vel_bias = momentum * n1.vel_bias + step_bias_n1
+            n1.vel_bias = momentum * n1.vel_bias + (lr * delta_n1 * n1.v_supply * 0.5)
             n1.w_bias += n1.vel_bias
             
+            # Update N2
             factor_n2 = lr * delta_n2 * (1.0/n2.last_n) * GAIN * n2.v_signal
-            
-            # Update N2 com Momentum
-            step_w1_n2 = factor_n2 if x1 else 0
-            n2.vel_w1 = momentum * n2.vel_w1 + step_w1_n2
+            n2.vel_w1 = momentum * n2.vel_w1 + (factor_n2 if x1 else 0)
             n2.w1 -= n2.vel_w1
             
-            step_w2_n2 = factor_n2 if x2 else 0
-            n2.vel_w2 = momentum * n2.vel_w2 + step_w2_n2
+            n2.vel_w2 = momentum * n2.vel_w2 + (factor_n2 if x2 else 0)
             n2.w2 -= n2.vel_w2
             
-            step_bias_n2 = lr * delta_n2 * n2.v_supply * 0.5
-            n2.vel_bias = momentum * n2.vel_bias + step_bias_n2
+            n2.vel_bias = momentum * n2.vel_bias + (lr * delta_n2 * n2.v_supply * 0.5)
             n2.w_bias += n2.vel_bias
 
-            # Manter físico (0-100%)
             for n in [n1, n2, n3]:
                 n.w1 = clip(n.w1, 0.1, 0.9)
                 n.w2 = clip(n.w2, 0.1, 0.9)
-                # Bias não pode passar da saturação (v_sat) para permitir troca de estado
-                # w_bias * v_supply <= v_sat  =>  w_bias <= v_sat / v_supply
-                max_bias_w = n.v_sat / n.v_supply
-                n.w_bias = clip(n.w_bias, 0.1, max_bias_w)
+                n.w_bias = clip(n.w_bias, 0.1, n.v_sat / n.v_supply)
         
-        if total_error < 1e-6:
-            break
+        if total_error < 1e-6: break
             
     return n1, n2, n3
 
@@ -265,7 +230,7 @@ if __name__ == "__main__":
         best_n1, best_n2, best_n3 = None, None, None
         min_errors = 999
         
-        print(f"--- Treinando {gate_name} (MSE + Margem 0.3V) ---")
+        print(f"--- Treinando {gate_name} (MSE Sigmoide) ---")
         # Aumentei para 20 tentativas para dar mais chance ao XOR
         for _ in range(20): 
             n1, n2, n3 = train_network(custom_table, epochs=100000)

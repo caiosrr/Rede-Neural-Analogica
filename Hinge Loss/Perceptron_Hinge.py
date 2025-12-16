@@ -81,41 +81,32 @@ def train_neuron(target_table: dict, gate_name: str = "Custom", lr: float = 0.00
             # Queremos que o sinal alinhado com a distância seja maior que a margem.
             # Validação: y_sign * z >= margem
             
-            score = y_sign * z
+            L = max(0, margem - y_sign * z)
             
-            if score < margem:
+            if L > 0:
                 # VIOLAÇÃO!
-                # O erro é linear. Não usamos derivada de sigmoide.
-                # Isso é o "Perceptron Learning Rule" clássico com margem.
                 errors_count += 1
                 
-                # Gradiente: Queremos aumentar 'score'.
-                # d(score)/dw = y_sign * d(z)/dw
-                # Update: w = w + lr * y_sign * d(z)/dw
-                
-                # Derivadas parciais de z em relação aos pesos (em fração 0-1)
-                # z = Va - Vbias
-                # Va = Vref + G(Vin - Vref)
-                # Vin = (Vref + w1*V + ...)/n
-                
-                # d(Va)/d(w1_frac) = G * (1/n) * DELTA_V  (se x1 ativo)
-                # d(Vbias)/d(wb_frac) = DELTA_V
+                # Gradiente do Hinge Loss:
+                # L = margem - y_sign * z
+                # dL/dz = -y_sign
+                delta = -y_sign
                 
                 # --- Atualização w1 ---
+                # dL/dw1 = dL/dz * dz/dw1 = delta * (GAIN/n * DELTA_V)
                 if x1:
-                    grad_w1 = (GAIN / n) * DELTA_V
-                    w1 = w1 + lr * y_sign * grad_w1
+                    grad_w1 = delta * (GAIN / n) * DELTA_V
+                    w1 -= lr * grad_w1
                 
                 # --- Atualização w2 ---
                 if x2:
-                    grad_w2 = (GAIN / n) * DELTA_V
-                    w2 = w2 + lr * y_sign * grad_w2
+                    grad_w2 = delta * (GAIN / n) * DELTA_V
+                    w2 -= lr * grad_w2
                     
                 # --- Atualização Bias ---
-                # z = ... - Vbias
-                # d(z)/d(wb) = - d(Vbias)/d(wb) = - DELTA_V
-                grad_bias = - DELTA_V
-                w_bias = w_bias + lr * y_sign * grad_bias
+                # dL/dwb = dL/dz * dz/dwb = delta * (-DELTA_V)
+                grad_bias = delta * (-DELTA_V)
+                w_bias -= lr * grad_bias
                 
                 # Clip
                 w1 = clip(w1)
