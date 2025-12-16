@@ -58,7 +58,7 @@ class HardwareNeuron:
         self.last_n = 1.0
         self.last_out_logic = 0
         
-        # Momentum (Velocidade)
+        #  (Velocidade)
         self.vel_w1 = 0.0
         self.vel_w2 = 0.0
         self.vel_bias = 0.0
@@ -120,7 +120,8 @@ def train_network(target_table, epochs=500000, lr=0.001):
     n2 = HardwareNeuron("Oculto 2", v_signal=L1_SIGNAL, v_supply=L1_VCC, v_ref=L1_REF, v_sat=L1_SAT)
     n3 = HardwareNeuron("Saída",    v_signal=L2_SIGNAL, v_supply=L2_VCC, v_ref=L2_REF, v_sat=L2_SAT)
     
-    momentum = 0.9
+    margem = 0.3
+    decay = 1e-5
     
     for i in range(epochs):
         total_error = 0.0
@@ -133,27 +134,31 @@ def train_network(target_table, epochs=500000, lr=0.001):
             n3.forward(out_n1, out_n2)
             
             z_n3 = n3.last_va - n3.last_bias_v
+            y_sign = 1.0 if y_target == 1 else -1.0
             
-            # MSE com Sigmoide
-            y_pred = sigmoid(z_n3)
-            error = y_target - y_pred
-            total_error += error ** 2
+            # MSE com Sigmoide Deslocada (Shifted)
+            z_shifted = z_n3 - (y_sign * margem)
             
-            # Gradiente: dL/dz = -2 * error * sigmoid_derivative(z)
-            delta_n3 = -2 * error * sigmoid_derivative(z_n3)
+            # Se já passou da margem, zera o erro
+            if (y_target == 1 and z_n3 > margem) or (y_target == 0 and z_n3 < -margem):
+                delta_n3 = 0.0
+            else:
+                y_pred = sigmoid(z_shifted)
+                error = y_target - y_pred
+                total_error += error ** 2
+                delta_n3 = -2 * error * sigmoid_derivative(z_shifted)
             
-            # Update N3
+            if delta_n3 == 0: continue
+
+            # Update N3 (Sem Momentum, Com Decay)
             factor_n3 = lr * delta_n3 * (1.0/n3.last_n) * GAIN * n3.v_signal
+            decay_val = lr * decay
             old_w1_n3, old_w2_n3 = n3.w1, n3.w2
             
-            n3.vel_w1 = momentum * n3.vel_w1 + (factor_n3 if out_n1 else 0)
-            n3.w1 -= n3.vel_w1
+            if out_n1: n3.w1 -= (factor_n3 + decay_val * n3.w1)
+            if out_n2: n3.w2 -= (factor_n3 + decay_val * n3.w2)
             
-            n3.vel_w2 = momentum * n3.vel_w2 + (factor_n3 if out_n2 else 0)
-            n3.w2 -= n3.vel_w2
-            
-            n3.vel_bias = momentum * n3.vel_bias + (lr * delta_n3 * n3.v_supply * 0.5)
-            n3.w_bias += n3.vel_bias
+            n3.w_bias -= lr * delta_n3 * (-1.0) * n3.v_supply
             
             # Backprop N1/N2
             dist_n1 = (n1.last_va - n1.last_bias_v)
@@ -164,30 +169,23 @@ def train_network(target_table, epochs=500000, lr=0.001):
 
             # Update N1
             factor_n1 = lr * delta_n1 * (1.0/n1.last_n) * GAIN * n1.v_signal
-            n1.vel_w1 = momentum * n1.vel_w1 + (factor_n1 if x1 else 0)
-            n1.w1 -= n1.vel_w1
-            
-            n1.vel_w2 = momentum * n1.vel_w2 + (factor_n1 if x2 else 0)
-            n1.w2 -= n1.vel_w2
-            
-            n1.vel_bias = momentum * n1.vel_bias + (lr * delta_n1 * n1.v_supply * 0.5)
-            n1.w_bias += n1.vel_bias
+            if x1: n1.w1 -= (factor_n1 + decay_val * n1.w1)
+            if x2: n1.w2 -= (factor_n1 + decay_val * n1.w2)
+            n1.w_bias -= lr * delta_n1 * (-1.0) * n1.v_supply
             
             # Update N2
             factor_n2 = lr * delta_n2 * (1.0/n2.last_n) * GAIN * n2.v_signal
-            n2.vel_w1 = momentum * n2.vel_w1 + (factor_n2 if x1 else 0)
-            n2.w1 -= n2.vel_w1
-            
-            n2.vel_w2 = momentum * n2.vel_w2 + (factor_n2 if x2 else 0)
-            n2.w2 -= n2.vel_w2
-            
-            n2.vel_bias = momentum * n2.vel_bias + (lr * delta_n2 * n2.v_supply * 0.5)
-            n2.w_bias += n2.vel_bias
+            if x1: n2.w1 -= (factor_n2 + decay_val * n2.w1)
+            if x2: n2.w2 -= (factor_n2 + decay_val * n2.w2)
+            n2.w_bias -= lr * delta_n2 * (-1.0) * n2.v_supply
 
             for n in [n1, n2, n3]:
                 n.w1 = clip(n.w1, 0.1, 0.9)
                 n.w2 = clip(n.w2, 0.1, 0.9)
-                n.w_bias = clip(n.w_bias, 0.1, n.v_sat / n.v_supply)
+                # Limita o Bias um pouco abaixo da saturação para garantir margem se o sinal saturar
+                # Ex: Se satura em 7.5V, limita bias em 7.0V
+                max_bias = (n.v_sat - 0.5) / n.v_supply
+                n.w_bias = clip(n.w_bias, 0.1, max_bias)
         
         if total_error < 1e-6: break
             
@@ -230,29 +228,49 @@ if __name__ == "__main__":
         best_n1, best_n2, best_n3 = None, None, None
         min_errors = 999
         
-        print(f"--- Treinando {gate_name} (MSE Sigmoide) ---")
-        # Aumentei para 20 tentativas para dar mais chance ao XOR
-        for _ in range(20): 
+        print(f"--- Treinando {gate_name} (MSE Shifted Sigmoid - Multi-Start) ---")
+        
+        best_n1, best_n2, best_n3 = None, None, None
+        min_errors = 999
+        best_margin_min = -1.0
+        
+        # 20 Tentativas para fugir de mínimos locais (XOR é difícil)
+        for attempt in range(20): 
             n1, n2, n3 = train_network(custom_table, epochs=100000)
-            erros = 0
+            
+            current_errors = 0
+            current_margin_min = 999.0
+            
             for (x1, x2), target in custom_table.items():
                 y1 = n1.forward(x1, x2)
                 y2 = n2.forward(x1, x2)
                 y3 = n3.forward(y1, y2)
                 
-                # Verifica margens também na seleção do melhor modelo
+                # Verifica margens
                 m1 = abs(n1.last_va - n1.last_bias_v)
                 m2 = abs(n2.last_va - n2.last_bias_v)
                 m3 = abs(n3.last_va - n3.last_bias_v)
-                margin_ok = (m1 > 0.3) and (m2 > 0.3) and (m3 > 0.3)
                 
-                if y3 != target or not margin_ok:
-                    erros += 1
-                    
-            if erros < min_errors:
-                min_errors = erros
+                min_m = min(m1, m2, m3)
+                if min_m < current_margin_min:
+                    current_margin_min = min_m
+                
+                if y3 != target:
+                    current_errors += 1
+            
+            # Critério: Menos erros > Maior Margem
+            if current_errors < min_errors:
+                min_errors = current_errors
+                best_margin_min = current_margin_min
                 best_n1, best_n2, best_n3 = n1, n2, n3
-            if erros == 0: break
+            elif current_errors == min_errors:
+                if current_margin_min > best_margin_min:
+                    best_margin_min = current_margin_min
+                    best_n1, best_n2, best_n3 = n1, n2, n3
+            
+            # Se achou solução perfeita com boa margem, para
+            if min_errors == 0 and best_margin_min > 0.2:
+                break
 
         print(f"\n=== RESULTADOS PARA {gate_name} ===")
         

@@ -70,12 +70,12 @@ def forward_pass(w1: float, w2: float, w_bias: float, x1: int, x2: int):
     
     return v_a, v_bias, n, pred_binaria
 
-def train_neuron(target_table: dict, gate_name: str = "Custom", lr: float = 0.001, epochs: int = 500000):
+def train_neuron(target_table: dict, gate_name: str = "Custom", lr: float = 0.001, epochs: int = 200000):
     w1 = random.uniform(0.0, 1.0)
     w2 = random.uniform(0.0, 1.0)
     w_bias = random.uniform(0.0, 1.0)
     
-    print(f"--- Treinando {gate_name} (MSE Sigmoide) ---")
+    margem = 0.3
     
     for epoch in range(epochs):
         total_error = 0.0
@@ -85,23 +85,34 @@ def train_neuron(target_table: dict, gate_name: str = "Custom", lr: float = 0.00
         for (x1, x2), y_target in exemplos:
             v_a, v_bias, n, _ = forward_pass(w1, w2, w_bias, x1, x2)
             z = v_a - v_bias
+            y_sign = 1.0 if y_target == 1 else -1.0
             
-            # MSE com Sigmoide
-            y_pred = sigmoid(z)
-            error = y_target - y_pred
-            total_error += error ** 2
+            # MSE com Sigmoide Deslocada (Shifted)
+            # Deslocamos o 'z' para exigir que ele vença a margem
+            z_shifted = z - (y_sign * margem)
             
-            # Gradiente: dL/dz = -2 * error * sigmoid_derivative(z)
-            delta = -2 * error * sigmoid_derivative(z)
+            # Se já passou da margem, zera o erro para não "super-ajustar" e prejudicar os outros
+            if (y_target == 1 and z > margem) or (y_target == 0 and z < -margem):
+                error = 0.0
+                delta = 0.0
+            else:
+                y_pred = sigmoid(z_shifted)
+                error = y_target - y_pred
+                total_error += error ** 2
+                delta = -2 * error * sigmoid_derivative(z_shifted)
             
-            if x1: w1 -= lr * delta * GAIN * (1.0/n) * DELTA_V
-            if x2: w2 -= lr * delta * GAIN * (1.0/n) * DELTA_V
-            
-            w_bias -= lr * delta * (-1.0) * DELTA_V
-            
-            w1 = clip(w1)
-            w2 = clip(w2)
-            w_bias = clip(w_bias, 0.0, 7.5 / DELTA_V)
+            if delta != 0:
+                # Weight Decay (Regularização L2) para evitar saturação desnecessária
+                decay = 1e-5
+                
+                if x1: w1 -= lr * (delta * GAIN * (1.0/n) * DELTA_V + decay * w1)
+                if x2: w2 -= lr * (delta * GAIN * (1.0/n) * DELTA_V + decay * w2)
+                
+                w_bias -= lr * delta * (-1.0) * DELTA_V
+                
+                w1 = clip(w1)
+                w2 = clip(w2)
+                w_bias = clip(w_bias, 0.0, 7.5 / DELTA_V)
     
         if total_error < 1e-5: break
             
@@ -142,7 +153,44 @@ if __name__ == "__main__":
         
         gate_name = known_gates.get(s_input, f"Custom: {s_input}")
         
-        w1_final, w2_final, w_bias_final = train_neuron(custom_table, gate_name=gate_name)
+        print(f"--- Treinando {gate_name} (MSE Shifted Sigmoid - Multi-Start) ---")
+        
+        best_w1, best_w2, best_bias = None, None, None
+        min_errors = 999
+        best_margin_min = -1.0
+        
+        # 10 Tentativas para fugir de mínimos locais
+        for attempt in range(10):
+            w1, w2, w_bias = train_neuron(custom_table, gate_name=gate_name, epochs=100000)
+            
+            # Avaliação
+            current_errors = 0
+            current_margin_min = 999.0
+            
+            for (x1, x2), target in custom_table.items():
+                va, vb, n, pred = forward_pass(w1, w2, w_bias, x1, x2)
+                if pred != target:
+                    current_errors += 1
+                
+                margin = abs(va - vb)
+                if margin < current_margin_min:
+                    current_margin_min = margin
+            
+            # Critério: Menos erros > Maior Margem
+            if current_errors < min_errors:
+                min_errors = current_errors
+                best_margin_min = current_margin_min
+                best_w1, best_w2, best_bias = w1, w2, w_bias
+            elif current_errors == min_errors:
+                if current_margin_min > best_margin_min:
+                    best_margin_min = current_margin_min
+                    best_w1, best_w2, best_bias = w1, w2, w_bias
+            
+            # Se achou solução perfeita com boa margem, para
+            if min_errors == 0 and best_margin_min > 0.2:
+                break
+        
+        w1_final, w2_final, w_bias_final = best_w1, best_w2, best_bias
         
         # Exibir Resultados
         v1 = frac_to_voltage(w1_final)
